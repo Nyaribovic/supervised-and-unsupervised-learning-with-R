@@ -1,0 +1,241 @@
+---
+title: "EcommerceCustomers"
+author: "VICTOR NYARIBO"
+date: "5/28/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#    EcommerceCustomers
+## a) Data Analytic Question
+
+The aim of  this project is to to understand customer’s behavior from a one year data set.
+
+## b) Success Metrics
+
+* Successful Loading the data.
+* Successful Handling missing data.
+* Successful Outliers detection.
+* Successful Outlier Visualization.
+* Successful Handling  outliers.
+* Successful Univariate analysis.
+* Successful Bivariate analysis.
+
+
+
+## c) Context
+
+Kira Plastinina is a Russian brand that is sold through a defunct chain of retail stores in Russia, Ukraine, Kazakhstan, Belarus, China, Philippines, and Armenia. The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups.
+
+## d) Data Understanding
+Variables
+
+* The dataset consists of 10 numerical and 8 categorical attributes.
+* 'Revenue' attribute has been be used as a class label.
+
+* "Administrative",
+* "Administrative Duration"
+* "Informational", 
+* "Informational Duration",
+* "Product Related" 
+* and "Product Related Duration" represents the number of different types of pages visited by the visitor in that   session and total time spent in each of these page categories. 
+
+* The "Bounce Rate", "Exit Rate" and "Page Value" features represent the metrics measured by "Google Analytics"    for each page in the e-commerce site. 
+
+* The value of the "Exit Rate" feature for a specific web page is calculated as for all pageviews to the page,    the percentage that was the last in the session.
+* The "Page Value" feature represents the average value for a web page that a user visited before completing an   e-commerce transaction. 
+* The "Special Day" feature indicates the closeness of the site visiting time to a specific special day 
+* The dataset also includes the operating system, browser, region, traffic type, visitor type as returning or new   visitor, a Boolean value indicating whether the date of the visit is weekend, and month of the year.
+
+## e) Experimental Design
+
+* Formulation of the research question.
+* Data Sourcing
+* Check the Data
+* Perform Data Cleaning
+* Perform Exploratory Data Analysis  (Univariate, Bivariate & Multivariate)
+* Implement the Solution
+* Challenging the Solution
+* Follow up Questions
+
+
+```{r cleaning,include=FALSE}
+
+###############cleaning r ENVIROMENT#####################################################3
+
+ls()  # TO see the objects you have created.
+rm(list=ls()) #First delete all the objects using rm(list=ls())
+gc()    #Then clear any occupied memory by running garbage collector using gc().
+#############################################################################
+library(AggregateR)
+library(broom)
+library(data.table)
+library(date,anytime)
+library(deSolve)
+library(distcrete)
+library(dplyr)
+library(DT)
+library(earlyR)
+library(EpiEstim)
+library(epitrix)
+library(ff)
+library(ggforce)
+library(ggplot2)
+library(ggthemes)
+library(gridExtra)
+library(gt)
+library(Hmisc)
+library(hrbrthemes)
+library(incidence)
+library(knitr)
+library(lubridate)
+library(magrittr)
+library(projections)
+library(readr)
+library(rvest)
+library(scales)
+library(stringr)
+library(tibble)
+library(tidyverse)
+library(writexl)
+library(xtable)
+library(class)
+library(caTools)
+library(psych)
+library(ISOcodes)
+library(caret)
+library(countrycode)
+library(mlbench)
+library(e1071)
+options( java.parameters = "-Xmx4g")
+options(digits = 15)
+
+
+```
+
+
+## Data Importation
+```{r  data, include=TRUE}
+Ecommerce_data<- read.csv("http://bit.ly/EcommerceCustomersDataset",header =T)
+
+
+```
+
+
+## converting data.frame data into data.table
+
+```{r  converting, include=TRUE}
+
+Ecommerce_data<-as.data.table(Ecommerce_data)
+class(Ecommerce_data) #checking class
+
+```
+
+## Data Columns
+```{r  preview, include=TRUE}
+
+kable(colnames(Ecommerce_data))
+
+```
+
+## Check for missing values
+
+```{r  missing, include=TRUE}
+library(Amelia)
+missmap(Ecommerce_data,main="Missing Values in Data Set")
+
+```
+
+## any NAs in data set?
+
+```{r  NAs, include=TRUE}
+colSums(is.na(Ecommerce_data))
+
+```
+
+Now lets find the duplicated rows in the dataset df and assign to a variable duplicated_rows below.
+
+```{r  duplicate, include=TRUE}
+duplicated_rows <- Ecommerce_data[duplicated(Ecommerce_data),]
+#Lets print out the variable duplicated_rows and see these duplicated rows
+kable(duplicated_rows)
+```
+
+
+Removing these duplicated rows in the data set or 
+showing these unique items and assigning to a variable unique_items below
+ 
+```{r  unique_items, include=TRUE}
+
+unique_items <- Ecommerce_data[!duplicated(Ecommerce_data), ]
+
+```
+
+
+
+Encoding Categorical Variables
+```{r  Encoding_m, include=TRUE}
+library(encode)
+
+Ecommerce_data$Weekend<-as.factor(Ecommerce_data$Weekend)
+Ecommerce_data$Weekend<-unclass(Ecommerce_data$Weekend)         # Convert categorical variables
+
+
+Ecommerce_data$Revenue<-as.factor(Ecommerce_data$Revenue)
+Ecommerce_data$Revenue<-unclass(Ecommerce_data$Revenue) 
+
+
+
+Ecommerce_data$VisitorType<-as.factor(Ecommerce_data$VisitorType)
+Ecommerce_data$VisitorType<-unclass(Ecommerce_data$VisitorType) 
+
+Ecommerce_data$Month<-as.factor(Ecommerce_data$Month)
+Ecommerce_data$Month<-unclass(Ecommerce_data$Month) 
+
+
+```
+
+## Outlier Treatment
+
+```{r  Outlier, include=TRUE}
+
+mod <- lm( Revenue~ExitRates, data=Ecommerce_data)
+cooksd <- cooks.distance(mod)
+
+#Influence measures
+#In general use, those observations that have a cook’s distance greater than 4 times 
+#the mean may be classified as Outlier
+
+
+plot(cooksd, pch="*", cex=2, main="Outliers by Cooks distance")  # plot cook's distance
+abline(h = 4*mean(cooksd, na.rm=T), col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")  # add labels
+
+```
+
+## Tibbles
+
+
+A tibble is a special kind of data.frame used by dplyr and other packages of the tidyverse. Tidyverse is a set of packages for data science that work in harmony because they share common data representations and API design. When a data.frame is turned into a tibble its class will change.
+
+```{r  Tibbles, include=TRUE}
+
+class(Ecommerce_data)
+
+Ecommerce_data<- tbl_df(Ecommerce_data)
+
+class(Ecommerce_data)
+
+
+```
+
+
+## Data Overview
+
+```{r  Glimpse, include=TRUE,echo = FALSE}
+glimpse(Ecommerce_data)
+
+```
+
